@@ -85,7 +85,7 @@ func (apiRouter *ApiRouter) StopTaskHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	taskCopy := *taskToStop
-	taskCopy.State = task.Completed
+	taskCopy.State = task.Running // this is to make sure that the task is added to queue
 	apiRouter.Worker.Db[taskIDParsed] = &taskCopy
 	apiRouter.Worker.AddTask(taskCopy)
 	log.Printf("added task %v to stop container %v\n", taskIDParsed, taskCopy.ContainerID)
