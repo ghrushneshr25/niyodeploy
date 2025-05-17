@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"niyodeploy/stats"
 	"niyodeploy/task"
 	"time"
 
@@ -17,13 +18,15 @@ type Worker struct {
 	Queue     queue.Queue
 	Db        map[uuid.UUID]*task.Task
 	TaskCount int
+	Stats     *stats.Stats
 }
 
 func (worker *Worker) CollectStats() {
-	// Collect stats from the worker
-	// This could include CPU usage, memory usage, etc.
-	// For now, we'll just print a message
-	println("Collecting stats from worker:", worker.Name)
+	for {
+		worker.Stats = stats.GetStats()
+		worker.Stats.TaskCount = len(worker.Db)
+		time.Sleep(5 * time.Second)
+	}
 }
 
 func (worker *Worker) AddTask(t task.Task) {

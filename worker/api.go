@@ -28,6 +28,9 @@ func (apiRouter *ApiRouter) Start() {
 
 func (apiRouter *ApiRouter) Init() {
 	apiRouter.Router = chi.NewRouter()
+	apiRouter.Router.Route("/stats", func(r chi.Router) {
+		r.Get("/", apiRouter.GetStatsHandler)
+	})
 	apiRouter.Router.Route("/tasks", func(r chi.Router) {
 		r.Get("/", apiRouter.GetTaskHandler)
 		r.Post("/", apiRouter.StartTaskHandler)
@@ -95,4 +98,10 @@ func (apiRouter *ApiRouter) GetTaskHandler(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(apiRouter.Worker.GetTasks())
+}
+
+func (apiRouter *ApiRouter) GetStatsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(apiRouter.Worker.Stats)
 }
