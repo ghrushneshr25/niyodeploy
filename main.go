@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"niyodeploy/task"
 	"niyodeploy/worker"
 	"time"
@@ -11,33 +11,35 @@ import (
 )
 
 func main() {
-	db := make(map[uuid.UUID]*task.Task)
+	host := "localhost"
+	port := 8080
+
 	w := worker.Worker{
 		Queue: *queue.New(),
-		Db:    db,
+		Db:    make(map[uuid.UUID]*task.Task),
 	}
 
-	t := task.Task{
-		ID:    uuid.New(),
-		Name:  "test-container-1",
-		State: task.Scheduled,
-		Image: "strm/helloworld-http",
+	api := worker.ApiRouter{
+		Address: host,
+		Port:    port,
+		Worker:  &w,
 	}
 
-	fmt.Println("starting task")
-	w.AddTask(t)
-	fmt.Println("task added to queue")
-	result := w.RunTask()
-	if result.Error != nil {
-		panic(result.Error)
-	}
+	go runTasks(&w)
+	api.Start()
+}
 
-	t.ContainerID = result.ContainerID
-	time.Sleep(15 * time.Second)
-
-	fmt.Println("stopping task")
-	result = w.StopTask(t)
-	if result.Error != nil {
-		panic(result.Error)
+func runTasks(worker *worker.Worker) {
+	for {
+		if worker.Queue.Len() != 0 {
+			result := worker.RunTask()
+			if result.Error != nil {
+				log.Println("Error running task:", result.Error)
+			}
+		} else {
+			log.Printf("no tasks to process currently.\n")
+		}
+		log.Println("sleeping for 5 seconds...")
+		time.Sleep(5 * time.Second)
 	}
 }

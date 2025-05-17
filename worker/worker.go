@@ -44,7 +44,6 @@ func (worker *Worker) RunTask() task.DockerResult {
 		taskPersisted = &taskQueue
 		worker.Db[taskQueue.ID] = taskPersisted
 	}
-
 	var result task.DockerResult
 
 	if task.ValidStateTransition(taskPersisted.State, task.Scheduled) {
@@ -107,4 +106,12 @@ func (worker *Worker) StopTask(t task.Task) task.DockerResult {
 	worker.Db[t.ID] = &t
 	log.Printf("Stopped ContainerID : %v task : %v", t.ContainerID, t.ID)
 	return result
+}
+
+func (worker *Worker) GetTasks() []*task.Task {
+	tasks := make([]*task.Task, 0)
+	for _, task := range worker.Db {
+		tasks = append(tasks, task)
+	}
+	return tasks
 }
