@@ -24,12 +24,25 @@ type DockerResult struct {
 	Result      string
 }
 
-func (d *Docker) Run() *DockerResult {
+func NewDocker(config Config) (*Docker, error) {
+	log.Printf("Creating Docker client with config: %+v", config)
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Printf("error creating Docker client: %v", err)
+		return nil, err
+	}
+	return &Docker{
+		Client: cli,
+		Config: config,
+	}, nil
+}
+
+func (d *Docker) Run() DockerResult {
 	log.Printf("Starting container for %s", d.Config.Name)
 	ctx := context.Background()
 	reader, err := d.Client.ImagePull(ctx, d.Config.Image, image.PullOptions{})
 	if err != nil {
-		return &DockerResult{Error: err, Action: "Pull Image"}
+		return DockerResult{Error: err, Action: "Pull Image"}
 	}
 	io.Copy(os.Stdout, reader)
 
@@ -57,31 +70,31 @@ func (d *Docker) Run() *DockerResult {
 
 	resp, err := d.Client.ContainerCreate(ctx, containerConfig, &hostConfig, nil, nil, d.Config.Name)
 	if err != nil {
-		return &DockerResult{Error: err, Action: "Create Container"}
+		return DockerResult{Error: err, Action: "Create Container"}
 	}
 
 	if err := d.Client.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return &DockerResult{Error: err, Action: "Start Container"}
+		return DockerResult{Error: err, Action: "Start Container"}
 	}
 
 	out, err := d.Client.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true})
 	if err != nil {
-		return &DockerResult{Error: err, Action: "Get Logs"}
+		return DockerResult{Error: err, Action: "Get Logs"}
 	}
 
 	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
-	return &DockerResult{
+	return DockerResult{
 		ContainerID: resp.ID,
 		Action:      "start",
 		Result:      "success",
 	}
 }
 
-func (d *Docker) Stop(containerID string) *DockerResult {
+func (d *Docker) Stop(containerID string) DockerResult {
 	log.Printf("Stopping container %s", containerID)
 	ctx := context.Background()
 	if err := d.Client.ContainerStop(ctx, containerID, container.StopOptions{}); err != nil {
-		return &DockerResult{Error: err, Action: "Stop Container"}
+		return DockerResult{Error: err, Action: "Stop Container"}
 	}
 
 	if err := d.Client.ContainerRemove(ctx, containerID, container.RemoveOptions{
@@ -89,10 +102,10 @@ func (d *Docker) Stop(containerID string) *DockerResult {
 		RemoveVolumes: true,
 		RemoveLinks:   false,
 	}); err != nil {
-		return &DockerResult{Error: err, Action: "Remove Container"}
+		return DockerResult{Error: err, Action: "Remove Container"}
 	}
 
-	return &DockerResult{
+	return DockerResult{
 		ContainerID: containerID,
 		Action:      "stop",
 		Result:      "success",
